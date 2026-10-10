@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyCamp: Курс Python с нуля</title>
+    <style>
+        :root {
+            --bg-dark: #1e1e1e;
+            --bg-sidebar: #252526;
+            --text-light: #d4d4d4;
+            --text-comment: #6a9955;
+            --text-keyword: #569cd6;
+            --accent: #007acc;
+            --success: #37872d;
+            --error: #f44747;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; height: 100vh; overflow: hidden; background-color: var(--bg-dark); color: var(--text-light); }
+        
+        #sidebar {
+            width: 250px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid #333;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        #sidebar h2 { font-size: 1.2rem; margin-bottom: 1rem; color: var(--accent); text-align: center; }
+        .lesson-list { list-style: none; }
+        .lesson-list li { margin-bottom: 0.5rem; }
+        .lesson-list button {
+            width: 100%;
+            text-align: left;
+            padding: 0.5rem 1rem;
+            border: none;
+            background: none;
+            color: var(--text-light);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+        .lesson-list button:hover { background-color: #333; }
+        .lesson-list button.active { background-color: var(--accent); color: #000; }
+
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; }
+        
+        #lesson-info { padding: 1rem; border-bottom: 1px solid #333; }
+        #lesson-info h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        #lesson-info p { color: #9cdcfe; line-height: 1.6; }
+        #task-block { margin-top: 1rem; padding: 1rem; background-color: #2d2d2d; border-radius: 5px; border-left: 4px solid var(--accent); }
+        #task-block h3 { margin-bottom: 0.5rem; }
+        #task-block p { font-size: 0.9rem; color: #cccccc; }
+
+        #editor-container { flex-grow: 1; display: flex; flex-direction: column; padding: 1rem; gap: 1rem; overflow: hidden; }
+        #code-editor { 
+            width: 100%; 
+            height: 0; 
+            flex-grow: 1; 
+            border: 1px solid #333; 
+            border-radius: 5px; 
+            font-family: 'Consolas', 'Courier New', monospace; 
+            font-size: 14px; 
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            padding: 1rem;
+            line-height: 1.5;
+            overflow-y: auto;
+            resize: none;
+            outline: none;
+        }
+        .code-comment { color: var(--text-comment); }
+        .code-keyword { color: var(--text-keyword); font-weight: bold; }
+
+        #controls { display: flex; gap: 1rem; align-items: center; }
+        button { padding: 0.7rem 1.5rem; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; font-weight: bold; }
+        #run-btn { background-color: var(--accent); color: white; }
+        #run-btn:hover { background-color: #005a9e; }
+        #reset-btn { background-color: #444; color: white; }
+        #reset-btn:hover { background-color: #555; }
+
+        #output { 
+            width: 100%; 
+            height: 150px; 
+            background-color: #000000; 
+            color: #00ff00; 
+            font-family: 'Consolas', 'Courier New', monospace; 
+            font-size: 14px; 
+            padding: 1rem; 
+            border-radius: 5px; 
+            border: 1px solid #333;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success { color: var(--success) !important; font-weight: bold; }
+        .error { color: var(--error) !important; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <h2>PyCamp: Python</h2>
+    <ul class="lesson-list" id="lessonList"></ul>
+</div>
+
+<div id="main-content">
+    <div id="lesson-info">
+        <h1 id="lessonTitle">Выберите урок</h1>
+        <p id="lessonDesc">В левой панели выберите главу, чтобы начать обучение.</p>
+        <div id="task-block" style="display:none;">
+            <h3>Практическое задание:</h3>
+            <p id="taskDesc"></p>
+        </div>
+    </div>
+    
+    <div id="editor-container">
+        <div id="controls">
+            <button id="run-btn">▶️ Запустить код</button>
+            <button id="reset-btn">🔄 Сбросить</button>
+            <span id="status"></span>
+        </div>
+        <textarea id="code-editor"></textarea>
+        <div id="output"></div>
+    </div>
+</div>
+
+<script>
+// === БАЗА ДАННЫХ КУРСА ===
+const lessons = [
+    {
+        id: 0,
+        title: "1. Привет, мир!",
+        desc: "Первая программа. Функция print() выводит текст в консоль.",
+        code: 'print("Привет, PyCamp!")',
+        task: "Выведите на экран фразу: 'Я учу Python на PyCamp'",
+        expected: "Я учу Python на PyCamp"
+    },
+    {
+        id: 1,
+        title: "2. Переменные и типы данных",
+        desc: "Переменные хранят данные. Основные типы: int (целые), float (дробные), str (строки).",
+        code: 'name = "Алексей"\nage = 30\nheight = 1.85\nprint(f"Привет, {name}. Тебе {age} лет.")',
+        task: "Создайте переменную city со значением 'Москва' и выведите строку 'Я живу в Москве'",
+        expected: "Я живу в Москве"
+    },
+    {
+        id: 2,
+        title: "3. Калькулятор: Арифметика",
+        desc: "Python — отличный калькулятор. +, -, *, /, // (целочисленное деление), % (остаток), ** (степень).",
+        code: 'a = 10\nb = 3\nprint(f"Сумма: {a + b}")\nprint(f"Остаток: {a % b}")',
+        task: "Объявите переменную x = 100. Разделите ее на 4 с помощью целочисленного деления (//) и выведите результат.",
+        expected: "25"
+    },
+    {
+        id: 3,
+        title: "4. Условные операторы (if, else)",
+        desc: "Позволяют выполнять код в зависимости от условий.",
+        code: 'age = 20\nif age >= 18:\n    print("Доступ разрешен")\nelse:\n    print("Доступ запрещен")',
+        task: "Создайте переменную score = 45. Если score больше 50, выведите 'Пройдено', иначе — 'Попробуйте еще раз'",
+        expected: "Попробуйте еще раз"
+    },
+    {
+        id: 4,
+        title: "5. Списки (Lists)",
+        desc: "Списки хранят упорядоченные наборы данных. Индексация начинается с 0.",
+        code: 'fruits = ["яблоко", "банан", "груша"]\nprint(fruits[0]) # первый элемент\nfruits.append("апельсин")\nprint(fruits)',
+        task: "Создайте список numbers = [10, 20, 30]. Добавьте в конец число 40 и выведите второй элемент списка (индекс 1).",
+        expected: "20"
+    },
+    {
+        id: 5,
+        title: "6. Циклы (for и while)",
+        desc: "Циклы нужны для повторения действий.",
+        code: '# Цикл for\nfor i in range(3):\n    print(f"Итерация {i}")\n\n# Цикл while\ncount = 0\nwhile count < 2:\n    print(f"While: {count}")\n    count += 1',
+        task: "С помощью цикла for выведите числа от 0 до 4 (включительно).",
+        expected: "0\n1\n2\n3\n4"
+    },
+    {
+        id: 6,
+        title: "7. Функции",
+        desc: "Функции (def) позволяют упаковывать код в переиспользуемые блоки.",
+        code: 'def greet(user_name):\n    return f"Привет, {user_name}!"\n\nprint(greet("Мир"))',
+        task: "Создайте функцию multiply(a, b), которая возвращает произведение двух чисел. Вызовите ее с аргументами 5 и 6.",
+        expected: "30"
+    }
+];
+
+// === ЛОГИКА ПРИЛОЖЕНИЯ ===
+const lessonList = document.getElementById('lessonList');
+const lessonTitle = document.getElementById('lessonTitle');
+const lessonDesc = document.getElementById('lessonDesc');
+const codeEditor = document.getElementById('code-editor');
+const output = document.getElementById('output');
+const runBtn = document.getElementById('run-btn');
+const resetBtn = document.getElementById('reset-btn');
+const status = document.getElementById('status');
+const taskBlock = document.getElementById('task-block');
+const taskDesc = document.getElementById('taskDesc');
+
+let currentLesson = null;
+
+// Рендер списка уроков
+lessons.forEach(lesson => {
+    const btn = document.createElement('button');
+    btn.textContent = lesson.title;
+    btn.onclick = () => loadLesson(lesson.id);
+    lessonList.appendChild(btn);
+});
+
+function loadLesson(id) {
+    currentLesson = lessons[id];
+    lessonTitle.textContent = currentLesson.title;
+    lessonDesc.textContent = currentLesson.desc;
+    codeEditor.value = currentLesson.code;
+    taskDesc.textContent = currentLesson.task;
+    taskBlock.style.display = 'block';
+    output.textContent = '';
+    status.textContent = '';
+    
+    // Подсветка синтаксиса (упрощенная)
+    let highlighted = currentLesson.code
+        .replace(/\b(print|def|if|else|for|in|while|return)\b/g, '<span class="code-keyword">$1</span>')
+        .replace(/#.*/g, '<span class="code-comment">$&</span>');
+    codeEditor.value = highlighted.replace(/<\/?span[^>]*>/g, '');
+    
+    // Выделение кнопки
+    document.querySelectorAll('#sidebar button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#sidebar button')[id].classList.add('active');
+}
+
+// Эмуляция консоли Python
+function runPython(code) {
+    output.textContent = '';
+    const lines = code.split('\n');
+    const scope = { 'print': (...args) => {
+        output.textContent += args.map(arg => String(arg)).join(' ') + '\n';
+    } };
+    
+    try {
+        // Простейший парсер для 'def' (только для этого курса)
+        let funcCode = '';
+        let inFunction = false;
+        let funcName = '';
+        let funcArgs = [];
+        
+        for (let line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('def ')) {
+                inFunction = true;
+                const match = trimmed.match(/def (\w+)$(.*?)$:/);
+                if (match) {
+                    funcName = match[1];
+                    funcArgs = match[2].split(',').map(a => a.trim()).filter(a => a);
+                }
+                funcCode += line + '\n';
+            } else if (inFunction) {
+                if (trimmed.startsWith('return ')) {
+                    funcCode += '    __result__ = ' + trimmed.slice(7) + '\n';
+                } else {
+                    funcCode += line + '\n';
+                }
+                if (!line.includes('    ') && line.trim() !== '') {
+                    inFunction = false;
+                    funcCode += '\n';
+                    // Создаем функцию в скоупе
+                    const funcStr = `function ${funcName}(${funcArgs.join(',')}) {\n${funcCode.split('\n').slice(1, -1).join('\n')}\n    return __result__;\n}`;
+                    scope[funcName] = new Function('return ' + funcStr)();
+                    funcCode = '';
+                }
+            } else {
+                // Исполняем обычный код
+                new Function('scope', `with(scope) { ${line} }`)(scope);
+            }
+        }
+    } catch (e) {
+        output.textContent += 'Ошибка выполнения: ' + e.message + '\n';
+        return false;
+    }
+    return true;
+}
+
+// Проверка ответа
+function checkAnswer() {
+    const userOutput = output.textContent.trim();
+    const expected = currentLesson.expected.trim();
+    
+    if (userOutput === expected) {
+        status.textContent = '✅ Задание выполнено!';
+        status.className = 'success';
+    } else {
+        status.textContent = '❌ Неверно. Попробуйте еще раз.';
+        status.className = 'error';
+    }
+}
+
+// Обработчики событий
+runBtn.onclick = () => {
+    status.textStatus = '';
+    runPython(codeEditor.value);
+    checkAnswer();
+};
+
+resetBtn.onclick = () => {
+    if (currentLesson) {
+        codeEditor.value = currentLesson.code;
+        output.textContent = '';
+        status.textContent = '';
+    }
+};
+
+// Загружаем первый урок по умолчанию
+loadLesson(0);
+</script>
+
+</body>
+</html>
